@@ -7,6 +7,7 @@ import org.apache.iceberg.io.PositionOutputStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,9 +29,17 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
 
     private PositionOutputStream makeStream(SeekableByteChannel chan) {
         return new PositionOutputStream() {
+
+            private long positionAfterClose = 0;
+
             @Override
             public long getPos() throws IOException {
-                return chan.position();
+                try {
+                    return chan.position();
+                } catch (ClosedChannelException e) {
+                    // Iceberg can call this after the channel is closed
+                    return positionAfterClose;
+                }
             }
 
             @Override
@@ -47,7 +56,15 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
             }
 
             @Override
-            public void close() throws IOException {
+            public synchronized void close() throws IOException {
+                try {
+                    positionAfterClose = chan.position();
+                } catch (ClosedChannelException e) {
+                    // Iceberg can call position after handle is closed
+                    // so save position for later.
+                    // If closed is called again after already closing
+                    // then do nothing.
+                }
                 chan.close();
             }
         };

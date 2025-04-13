@@ -42,9 +42,22 @@ public class Main {
             e.printStackTrace();
         }
 
-        OutputFile f4 = f.newOutputFile("tmp_???fold/sub1/out3.txt");
-        try (PositionOutputStream s4 = f4.createOrOverwrite()) {
-            s4.write(75);
+        try {
+            OutputFile f4 = f.newOutputFile("tmp_???fold/sub1/out3.txt");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        PositionOutputStream s3 = f3.createOrOverwrite();
+        try {
+            s3.write(72);
+            s3.write(75);
+            System.out.println(s3.getPos());
+            s3.close();
+            System.out.println("closed 1");
+            s3.close();
+            System.out.println("closed 2");
+            System.out.println(s3.getPos());
         } catch (IOException e) {
             e.printStackTrace();
         }
