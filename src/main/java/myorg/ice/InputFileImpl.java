@@ -18,17 +18,9 @@ public class InputFileImpl extends FileImpl implements InputFile {
 
     private SeekableInputStream makeStream(SeekableByteChannel chan) {
         return new SeekableInputStream() {
-
-            private long positionAfterClose = 0;
-
             @Override
             public long getPos() throws IOException {
-                try {
-                    return chan.position();
-                } catch (ClosedChannelException e) {
-                    // Iceberg can call this after the channel is closed
-                    return positionAfterClose;
-                }
+                return chan.position();
             }
 
             @Override
@@ -54,15 +46,7 @@ public class InputFileImpl extends FileImpl implements InputFile {
             }
 
             @Override
-            public synchronized void close() throws IOException {
-                try {
-                    positionAfterClose = chan.position();
-                } catch (ClosedChannelException e) {
-                    // Iceberg can call position after handle is closed
-                    // so save position for later.
-                    // If closed is called again after already closing
-                    // then do nothing.
-                }
+            public void close() throws IOException {
                 chan.close();
             }
         };

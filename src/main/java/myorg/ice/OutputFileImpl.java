@@ -30,16 +30,11 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
     private PositionOutputStream makeStream(SeekableByteChannel chan) {
         return new PositionOutputStream() {
 
-            private long positionAfterClose = 0;
+            private volatile long positionAfterClose = 0;
 
             @Override
             public long getPos() throws IOException {
-                try {
-                    return chan.position();
-                } catch (ClosedChannelException e) {
-                    // Iceberg can call this after the channel is closed
-                    return positionAfterClose;
-                }
+                return chan.position();
             }
 
             @Override
@@ -56,7 +51,7 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
             }
 
             @Override
-            public synchronized void close() throws IOException {
+            public void close() throws IOException {
                 try {
                     positionAfterClose = chan.position();
                 } catch (ClosedChannelException e) {
@@ -66,6 +61,16 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
                     // then do nothing.
                 }
                 chan.close();
+            }
+
+            @Override
+            public long storedLength() throws IOException {
+                try {
+                    return chan.position();
+                } catch (ClosedChannelException e) {
+                    // Iceberg can call this after the channel is closed
+                    return positionAfterClose;
+                }
             }
         };
     }
