@@ -32,9 +32,18 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
 
             private volatile long positionAfterClose = 0;
 
+            private long positionOrLength() throws IOException {
+                try {
+                    return chan.position();
+                } catch (ClosedChannelException e) {
+                    // Iceberg can call this after the channel is closed
+                    return positionAfterClose;
+                }
+            }
+
             @Override
             public long getPos() throws IOException {
-                return chan.position();
+                return positionOrLength();
             }
 
             @Override
@@ -65,12 +74,7 @@ public class OutputFileImpl extends FileImpl implements OutputFile {
 
             @Override
             public long storedLength() throws IOException {
-                try {
-                    return chan.position();
-                } catch (ClosedChannelException e) {
-                    // Iceberg can call this after the channel is closed
-                    return positionAfterClose;
-                }
+                return positionOrLength();
             }
         };
     }
